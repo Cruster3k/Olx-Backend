@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OLX Flip Scanner Pro</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { height: 100%; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0f1419;
+            color: #e0e0e0;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        h1 { font-size: 28px; font-weight: 700; }
+        .header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: #1a1f2e;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #ff6b35;
+        }
+        .stat-value { font-size: 24px; font-weight: 700; color: #ff6b35; }
+        .stat-label { font-size: 12px; color: #999; margin-top: 5px; }
+        button {
+            background: #ff6b35;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+        button:hover { background: #ff5520; }
+        button:disabled { background: #666; cursor: not-allowed; }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            background: transparent;
+            color: #999;
+            padding: 10px 15px;
+            border: none;
+            border-bottom: 3px solid transparent;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            color: #ff6b35;
+            border-bottom-color: #ff6b35;
+        }
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+            background: #1a1f2e;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .filter-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .filter-field label {
+            color: #999;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        select, input {
+            background: #0f1419;
+            color: #e0e0e0;
+            border: 1px solid #333;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 14px;
+            width: 100%;
+        }
+        .listings {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            grid-auto-rows: max-content;
+        }
+        .listing-card {
+            background: #1a1f2e;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .listing-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 107, 53, 0.2);
+        }
+        .listing-card.hot-deal { border-color: #ff6b35; box-shadow: 0 0 0 1px rgba(255, 107, 53, 0.35); }
+        .listing-card.good-deal { border-color: #4caf50; }
+        .listing-card.unavailable { opacity: 0.62; border-color: #555; box-shadow: none; }
+        .listing-image {
+            width: 100%;
+            height: 200px;
+            background: #0f1419;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #666;
+            position: relative;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .listing-image img { width: 100%; height: 100%; object-fit: cover; }
+        .badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #ff6b35;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .badge.damaged { background: #ff9500; }
+        .badge.new { background: #4caf50; }
+        .badge.pending { background: #607dff; }
+        .badge.hot { background: #ff3d00; }
+        .badge.good { background: #4caf50; }
+        .badge.unavailable { background: #777; }
+        .badge.unknown { background: #8a6d3b; }
+        .listing-content {
+            padding: 15px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .listing-model {
+            font-size: 16px;
+            font-weight: 700;
+            color: #ff6b35;
+            margin-bottom: 5px;
+        }
+        .listing-title {
+            font-size: 13px;
+            color: #ccc;
+            margin-bottom: 10px;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .listing-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 12px;
+            color: #999;
+        }
+        .listing-price {
+            font-size: 20px;
+            font-weight: 700;
+            color: #4caf50;
+            margin-bottom: 10px;
+        }
+        .listing-discount {
+            font-size: 14px;
+            color: #ff6b35;
+            margin-bottom: 10px;
+        }
+        .listing-discount.hot { color: #ff3d00; font-weight: 700; }
+        .listing-discount.good { color: #4caf50; font-weight: 700; }
+        .listing-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: auto;
+        }
+        .listing-actions button {
+            flex: 1;
+            padding: 8px;
+            font-size: 12px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: #1a1f2e;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-content h2 { margin-bottom: 20px; }
+        .modal-content label { display: block; margin-top: 15px; font-size: 14px; margin-bottom: 5px; }
+        .modal-content input, .modal-content textarea {
+            width: 100%;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #0f1419;
+            border: 1px solid #333;
+            border-radius: 6px;
+            color: #e0e0e0;
+        }
+        .modal-content input[type="checkbox"] { width: auto; }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+            grid-column: 1/-1;
+        }
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #1a1f2e;
+            border-left: 4px solid #ff6b35;
+            padding: 15px 20px;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            animation: slideIn 0.3s ease-out;
+            max-width: 400px;
+        }
+        .notification.success { border-left-color: #4caf50; }
+        .notification.warning { border-left-color: #ff9500; }
+        .notification.error { border-left-color: #f44336; }
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #333;
+            border-top-color: #ff6b35;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔥 OLX Flip Scanner Pro</h1>
+            <div class="header-actions">
+                <button onclick="openSettings()">⚙️ Settings</button>
+                <button id="scanBtn" onclick="triggerScan()">Refresh</button>
+            </div>
+        </header>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value" id="totalListings">0</div>
+                <div class="stat-label">Total Listings</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="totalDeals">0</div>
+                <div class="stat-label">🔥 Deals</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="newCount">0</div>
+                <div class="stat-label">New 60m</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="pendingCount">0</div>
+                <div class="stat-label">Oczekujące</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="unavailableCount">0</div>
+                <div class="stat-label">Unavailable</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="lastScan">—</div>
+                <div class="stat-label">Last Scan (CET)</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="scanStatus">Ready</div>
+                <div class="stat-label">Status</div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('deals')">🔥 Deals</button>
+            <button class="tab-btn" onclick="switchTab('all')">📦 All</button>
+            <button class="tab-btn" onclick="switchTab('new')">🆕 New</button>
+            <button class="tab-btn" onclick="switchTab('pending')">⏳ Oczekujące</button>
+            <button class="tab-btn" onclick="switchTab('watchlist')">⭐ Watchlist</button>
+        </div>
+
+        <div class="filters">
+            <div class="filter-field">
+                <label for="modelFilter">Search</label>
+                <input type="text" id="modelFilter" placeholder="iPhone 13, OnePlus..." onchange="applyFilters()">
+            </div>
+            <div class="filter-field">
+                <label for="categoryFilter">Category</label>
+                <select id="categoryFilter" onchange="applyFilters()">
+                    <option value="">All</option>
+                    <option value="iphone">iPhone</option>
+                    <option value="oneplus">OnePlus</option>
+                    <option value="poco">POCO</option>
+                    <option value="samsung">Samsung</option>
+                    <option value="macbook">MacBook</option>
+                    <option value="playstation">PlayStation</option>
+                    <option value="xbox">Xbox</option>
+                </select>
+            </div>
+            <div class="filter-field">
+                <label for="cityFilter">Location</label>
+                <input type="text" id="cityFilter" placeholder="Warszawa, Kraków, Wrocław..." onchange="applyFilters()">
+            </div>
+            <div class="filter-field">
+                <label for="radiusFilter">Radius</label>
+                <select id="radiusFilter" onchange="applyFilters()">
+                    <option value="">Exact city</option>
+                    <option value="10">10 km</option>
+                    <option value="25">25 km</option>
+                    <option value="50">50 km</option>
+                    <option value="100">100 km</option>
+                    <option value="200">200 km</option>
+                </select>
+            </div>
+            <div class="filter-field">
+                <label for="provinceFilter">Province</label>
+                <select id="provinceFilter" onchange="applyFilters()">
+                    <option value="">All provinces</option>
+                    <option value="dolnoslaskie">dolno&#347;l&#261;skie</option>
+                    <option value="kujawsko-pomorskie">kujawsko-pomorskie</option>
+                    <option value="lubelskie">lubelskie</option>
+                    <option value="lubuskie">lubuskie</option>
+                    <option value="lodzkie">&#322;&#243;dzkie</option>
+                    <option value="malopolskie">ma&#322;opolskie</option>
+                    <option value="mazowieckie">mazowieckie</option>
+                    <option value="opolskie">opolskie</option>
+                    <option value="podkarpackie">podkarpackie</option>
+                    <option value="podlaskie">podlaskie</option>
+                    <option value="pomorskie">pomorskie</option>
+                    <option value="slaskie">&#347;l&#261;skie</option>
+                    <option value="swietokrzyskie">&#347;wi&#281;tokrzyskie</option>
+                    <option value="warminsko-mazurskie">warmi&#324;sko-mazurskie</option>
+                    <option value="wielkopolskie">wielkopolskie</option>
+                    <option value="zachodniopomorskie">zachodniopomorskie</option>
+                </select>
+            </div>
+            <div class="filter-field">
+                <label for="conditionFilter">Condition</label>
+                <select id="conditionFilter" onchange="applyFilters()">
+                    <option value="">All</option>
+                    <option value="new">New</option>
+                    <option value="very_good">Very good</option>
+                    <option value="used">Used</option>
+                    <option value="damaged">Damaged</option>
+                </select>
+            </div>
+            <div class="filter-field">
+                <label for="sortFilter">Sort</label>
+                <select id="sortFilter" onchange="applyFilters()">
+                    <option value="best">Best deals</option>
+                    <option value="newest">Newest</option>
+                    <option value="price">Price low</option>
+                    <option value="price_desc">Price high</option>
+                    <option value="discount">Discount</option>
+                </select>
+            </div>
+            <div class="filter-field">
+                <label for="availabilityFilter">Availability</label>
+                <select id="availabilityFilter" onchange="applyFilters()">
+                    <option value="">Hide unavailable</option>
+                    <option value="active">Confirmed active only</option>
+                    <option value="unknown">Not verified only</option>
+                    <option value="all">Include unavailable</option>
+                    <option value="unavailable">Unavailable only</option>
+                </select>
+            </div>
+            <div class="filter-field">
+                <label>&nbsp;</label>
+                <button onclick="clearFilters()" style="background: #666;">Reset filters</button>
+            </div>
+        </div>
+
+        <div class="listings" id="listingsContainer"></div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal" id="settingsModal">
+        <div class="modal-content">
+            <h2>⚙️ Settings</h2>
+            
+            <h3 style="margin-top: 25px; margin-bottom: 10px; color: #ff6b35;">📍 Location</h3>
+            <label>City (e.g., Warszawa, Kraków)</label>
+            <input type="text" id="cityInput" placeholder="Leave empty for all Poland">
+            <label>Search Radius (km, 0 = no limit)</label>
+            <input type="number" id="radiusInput" value="0" min="0" max="100">
+            
+            <h3 style="margin-top: 25px; margin-bottom: 10px; color: #ff6b35;">🤖 Auto-Scan</h3>
+            <label><input type="checkbox" id="autoScan"> Auto-Scan (every 5 minutes)</label>
+            <label>Discount Threshold (%)</label>
+            <input type="number" id="thresholdInput" value="15" min="0" max="100">
+            
+            <h3 style="margin-top: 25px; margin-bottom: 10px; color: #ff6b35;">📱 Telegram Alerts</h3>
+            <label>Bot Token</label>
+            <input type="text" id="telegramToken" placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11">
+            <label>Chat ID</label>
+            <input type="text" id="telegramChatId" placeholder="123456789">
+            
+            <div class="modal-actions">
+                <button onclick="closeSettings()" style="background: #666;">Cancel</button>
+                <button onclick="saveSettings()">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTab = "deals";
+        let allListings = [];
+        let autoRefreshInterval = null;
+        const WATCHLIST_STORAGE_KEY = "olxFlipScannerWatchlist";
+        const CONFIG_STORAGE_KEY = "olxFlipScannerConfig";
+
+        function showNotification(message, type = "info") {
+            const notif = document.createElement("div");
+            notif.className = `notification ${type}`;
+            notif.textContent = message;
+            document.body.appendChild(notif);
+            setTimeout(() => notif.remove(), 5000);
+        }
+
+        function readStoredJson(key, fallback) {
+            try {
+                return JSON.parse(localStorage.getItem(key)) || fallback;
+            } catch (e) {
+                return fallback;
+            }
+        }
+
+        function getWatchlist() {
+            return readStoredJson(WATCHLIST_STORAGE_KEY, {});
+        }
+
+        function saveWatchlist(watchlist) {
+            localStorage.setItem(WATCHLIST_STORAGE_KEY, JSON.stringify(watchlist));
+        }
+
+        function getLocalConfig() {
+            return {
+                auto_scan: false,
+                telegram_token: "",
+                telegram_chat_id: "",
+                threshold: 15,
+                city: "",
+                radius: 0,
+                ...readStoredJson(CONFIG_STORAGE_KEY, {})
+            };
+        }
+
+        function saveLocalConfig(config) {
+            localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
+        }
+
+        function formatDate(value) {
+            if (!value) return "";
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return String(value);
+            return date.toLocaleString("pl-PL", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit"
+            });
+        }
+
+        function formatAge(value) {
+            if (!value) return "age: unknown";
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return "age: unknown";
+            const minutes = Math.max(0, Math.floor((Date.now() - date.getTime()) / 60000));
+            if (minutes < 60) return `${minutes}m ago`;
+            const hours = Math.floor(minutes / 60);
+            if (hours < 24) return `${hours}h ago`;
+            return `${Math.floor(hours / 24)}d ago`;
+        }
+
+        function normalizeListing(listing) {
+            const watchlist = getWatchlist();
+            const id = listing.id == null ? "" : String(listing.id);
+            const discount = Number(listing.discount_pct ?? 0);
+            const price = Number(listing.price ?? 0);
+            const dealScore = Number(listing.deal_score ?? 0);
+            const distance = Number(listing.distance_km);
+            const timestamp = listing.created_at || listing.first_seen_at || listing.last_seen_at || listing.scanned_at;
+
+            return {
+                ...listing,
+                id,
+                title: listing.title || "Untitled listing",
+                price: Number.isFinite(price) ? price : 0,
+                url: listing.url || "#",
+                category: listing.category || "unknown",
+                model: listing.model || "Unknown",
+                condition: listing.condition || "",
+                city: listing.city || "Unknown",
+                province: listing.province || "",
+                region: listing.region || "",
+                latitude: listing.latitude ?? null,
+                longitude: listing.longitude ?? null,
+                distance_km: Number.isFinite(distance) ? distance : null,
+                thumb: listing.thumb || "",
+                created_display: listing.created_display || formatDate(listing.created_at || listing.scanned_at),
+                age_display: formatAge(timestamp),
+                discount_pct: Number.isFinite(discount) ? discount : 0,
+                market_median: listing.market_median ?? null,
+                deal_label: listing.deal_label || "none",
+                deal_score: Number.isFinite(dealScore) ? dealScore : 0,
+                listing_status: listing.listing_status || "unknown",
+                availability_status: listing.availability_status || "unknown",
+                availability_checked_at: listing.availability_checked_at || null,
+                unavailable_at: listing.unavailable_at || null,
+                last_seen_at: listing.last_seen_at || null,
+                is_suspicious: Boolean(listing.is_suspicious),
+                is_opportunity: Boolean(listing.is_opportunity),
+                is_new: Boolean(listing.is_new),
+                in_watchlist: Boolean(listing.in_watchlist) || Boolean(watchlist[id])
+            };
+        }
+
+        async function updateStats(data = {}) {
+            document.getElementById('totalListings').textContent = data.total ?? allListings.length;
+            document.getElementById('totalDeals').textContent = allListings.filter(l => l.is_opportunity).length;
+            document.getElementById('newCount').textContent = allListings.filter(l => l.is_new).length;
+            document.getElementById('pendingCount').textContent = allListings.filter(l => l.listing_status === 'pending').length;
+            document.getElementById('unavailableCount').textContent = allListings.filter(l => l.availability_status === 'unavailable').length;
+
+            const latestLocalScan = allListings
+                .map(l => l.scanned_at || l.created_at)
+                .filter(Boolean)
+                .sort()
+                .pop();
+
+            document.getElementById('lastScan').textContent = formatDate(latestLocalScan) || '---';
+            document.getElementById('scanStatus').textContent = 'Ready';
+
+            try {
+                const res = await fetch('/listings/stats');
+                if (!res.ok) return;
+                const stats = await res.json();
+                document.getElementById('totalListings').textContent = stats.total_listings ?? data.total ?? allListings.length;
+                document.getElementById('totalDeals').textContent = stats.deals_count ?? allListings.filter(l => l.is_opportunity).length;
+                document.getElementById('newCount').textContent = stats.new_count ?? allListings.filter(l => l.is_new).length;
+                document.getElementById('pendingCount').textContent = stats.pending_count ?? allListings.filter(l => l.listing_status === 'pending').length;
+                document.getElementById('unavailableCount').textContent = stats.unavailable_count ?? allListings.filter(l => l.availability_status === 'unavailable').length;
+                document.getElementById('lastScan').textContent = formatDate(stats.last_scan || stats.latest_scrape || latestLocalScan) || '---';
+                document.getElementById('scanStatus').textContent = stats.status || 'Ready';
+            } catch (e) {
+                console.warn('Stats unavailable', e);
+            }
+        }
+
+        async function loadListings() {
+            try {
+                const apiTab = currentTab === 'watchlist' ? 'watchlist' : currentTab;
+                const category = document.getElementById('categoryFilter').value;
+                const city = document.getElementById('cityFilter').value.trim();
+                const radiusKm = document.getElementById('radiusFilter').value;
+                const province = document.getElementById('provinceFilter').value;
+                const condition = document.getElementById('conditionFilter').value;
+                const availability = document.getElementById('availabilityFilter').value;
+                const sort = document.getElementById('sortFilter').value;
+                const search = document.getElementById('modelFilter').value.trim();
+                const params = new URLSearchParams({ tab: apiTab, limit: 1000 });
+
+                if (category) params.set('category', category);
+                if (city) params.set('city', city);
+                if (city && radiusKm) params.set('radius_km', radiusKm);
+                if (province) params.set('province', province);
+                if (condition) params.set('condition', condition);
+                if (availability) params.set('availability', availability);
+                if (sort) params.set('sort', sort);
+                if (search) params.set('search', search);
+
+                const url = `/listings?${params}`;
+                console.log('Listings API URL:', url);
+                const res = await fetch(url);
+                if (!res.ok) throw new Error(`Listings request failed with ${res.status}`);
+                const data = await res.json();
+                allListings = (data.listings || []).map(normalizeListing);
+                renderListings();
+                updateStats(data);
+            } catch (e) {
+                console.error(e);
+                showNotification("Error loading listings", "error");
+            }
+        }
+
+        function renderListings() {
+            const container = document.getElementById('listingsContainer');
+            const visibleListings = currentTab === 'watchlist'
+                ? allListings.filter(listing => listing.in_watchlist)
+                : allListings;
+
+            if (!visibleListings.length) {
+                let message = '📭 No listings found';
+                if (currentTab === 'deals') message = '😢 No good deals found in your area right now. Try adjusting your filters or check back later!';
+                if (currentTab === 'new') message = 'No listings from the last 60 minutes.';
+                if (currentTab === 'pending') message = 'No pending listings visible from OLX right now.';
+                if (currentTab === 'watchlist') message = '⭐ Your watchlist is empty. Add listings to keep track of them!';
+                container.innerHTML = `<div class="empty-state">${message}</div>`;
+                return;
+            }
+            
+            container.innerHTML = '';
+            visibleListings.forEach(listing => {
+                const card = document.createElement('div');
+                const isUnavailable = listing.availability_status === 'unavailable';
+                const isVerifiedActive = listing.availability_status === 'active';
+                const safeDealLabel = isVerifiedActive ? listing.deal_label : 'none';
+                card.className = `listing-card ${isUnavailable ? 'unavailable' : ''} ${safeDealLabel === 'hot_deal' ? 'hot-deal' : ''} ${safeDealLabel === 'good_deal' ? 'good-deal' : ''}`;
+                
+                let badges = '';
+                if (safeDealLabel === 'hot_deal') badges += '<div class="badge hot">🔥 HOT</div>';
+                if (safeDealLabel === 'good_deal') badges += '<div class="badge good">GOOD</div>';
+                if (listing.is_new) badges += '<div class="badge new">🆕 NEW</div>';
+                if (listing.listing_status === 'pending') badges += '<div class="badge pending">⏳ PENDING</div>';
+                if (isUnavailable) badges += '<div class="badge unavailable">Unavailable</div>';
+                if (listing.availability_status === 'unknown') badges += '<div class="badge unknown">Not verified</div>';
+                if (listing.condition === 'damaged') badges += '<div class="badge damaged">🔧 DAMAGED</div>';
+                if (listing.is_suspicious) badges += '<div class="badge damaged">CHECK</div>';
+
+                const medianText = listing.market_median === null ? 'median: n/a' : 'median: ' + listing.market_median + ' PLN';
+                const discountClass = safeDealLabel === 'hot_deal' ? 'hot' : safeDealLabel === 'good_deal' ? 'good' : '';
+                const distanceText = listing.distance_km === null ? '' : ` • ${listing.distance_km} km`;
+                const statusText = isUnavailable ? 'unavailable' : listing.availability_status === 'unknown' ? 'not verified' : listing.listing_status;
+                const olxButton = isUnavailable
+                    ? '<button disabled style="background: #555;">Unavailable</button>'
+                    : `<button onclick="window.open('${listing.url}')">🔗 OLX</button>`;
+                
+                card.innerHTML = `
+                    <div class="listing-image">
+                        ${listing.thumb ? `<img src="${listing.thumb}" alt="">` : '📷 No image'}
+                        ${badges}
+                    </div>
+                    <div class="listing-content">
+                        <div class="listing-model">${listing.category.toUpperCase()} • ${listing.model}</div>
+                        <div class="listing-title">${listing.title}</div>
+                        <div class="listing-meta">
+                            <span>${listing.city || 'Unknown'}${distanceText}</span>
+                            <span>${listing.age_display}</span>
+                        </div>
+                        <div class="listing-price">${listing.price} PLN</div>
+                        <div class="listing-discount ${discountClass}">↓ ${listing.discount_pct}% (${medianText})</div>
+                        <div class="listing-meta">
+                            <span>${listing.created_display}</span>
+                            <span>${statusText}</span>
+                        </div>
+                        <div class="listing-actions">
+                            ${olxButton}
+                            <button onclick="toggleWatchlist('${listing.id}', ${listing.in_watchlist})">${listing.in_watchlist ? '✕ Remove' : '⭐ Watch'}</button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(button => {
+                button.classList.toggle('active', button.getAttribute('onclick') === `switchTab('${tab}')`);
+            });
+            if (tab === 'deals') document.getElementById('sortFilter').value = 'best';
+            if (tab === 'new' || tab === 'pending') document.getElementById('sortFilter').value = 'newest';
+            loadListings();
+        }
+
+        function applyFilters() {
+            loadListings();
+        }
+
+        function clearFilters() {
+            setDefaultFilters();
+            loadListings();
+        }
+
+        function setDefaultFilters() {
+            document.getElementById('categoryFilter').value = '';
+            document.getElementById('cityFilter').value = '';
+            document.getElementById('radiusFilter').value = '';
+            document.getElementById('provinceFilter').value = '';
+            document.getElementById('conditionFilter').value = '';
+            document.getElementById('modelFilter').value = '';
+            document.getElementById('availabilityFilter').value = '';
+            document.getElementById('sortFilter').value = currentTab === 'deals' ? 'best' : 'newest';
+        }
+
+        async function triggerScan() {
+            const btn = document.getElementById('scanBtn');
+            btn.disabled = true;
+            document.getElementById('scanStatus').textContent = 'Refreshing...';
+            showNotification("This backend scans automatically. Refreshing listings now.", "info");
+            await loadListings();
+            btn.disabled = false;
+        }
+
+        async function toggleWatchlist(id, inWatchlist) {
+            const watchlist = getWatchlist();
+            if (inWatchlist) {
+                delete watchlist[id];
+            } else {
+                watchlist[id] = true;
+            }
+            saveWatchlist(watchlist);
+
+            allListings = allListings.map(listing => (
+                listing.id === id ? { ...listing, in_watchlist: !inWatchlist } : listing
+            ));
+            renderListings();
+            updateStats();
+        }
+
+        function openSettings() {
+            const config = getLocalConfig();
+            document.getElementById('settingsModal').classList.add('active');
+            document.getElementById('autoScan').checked = config.auto_scan;
+            document.getElementById('telegramToken').value = config.telegram_token || '';
+            document.getElementById('telegramChatId').value = config.telegram_chat_id || '';
+            document.getElementById('thresholdInput').value = config.threshold || 15;
+            document.getElementById('cityInput').value = config.city || '';
+            document.getElementById('radiusInput').value = config.radius || 0;
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+
+        async function saveSettings() {
+            const config = {
+                auto_scan: document.getElementById('autoScan').checked,
+                telegram_token: document.getElementById('telegramToken').value,
+                telegram_chat_id: document.getElementById('telegramChatId').value,
+                threshold: parseFloat(document.getElementById('thresholdInput').value),
+                city: document.getElementById('cityInput').value,
+                radius: parseInt(document.getElementById('radiusInput').value) || 0
+            };
+            saveLocalConfig(config);
+            closeSettings();
+            showNotification("Settings saved in this browser.", "success");
+        }
+
+        // Auto-refresh every 10 seconds
+        setInterval(loadListings, 10000);
+        
+        // Initial load
+        setDefaultFilters();
+        loadListings();
+    </script>
+</body>
+</html>
